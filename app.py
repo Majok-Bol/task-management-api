@@ -353,19 +353,103 @@ tasks = [
         "status": "pending"
     }
 ]
-#fetch task by id
-#using dynamic route
-# @app.get("/api/v1/tasks/<int:id>")
-# def get_task(id):
-#     if id>len(tasks):
-#         return jsonify({
-#             "error":"Task not found"
-#         }),404
-#     for task in tasks:
-#         if task["id"]==id:
-#             return jsonify(task),200
+
+#get task by id
+@app.get("/api/v1/tasks/<id>")
+def get_task_by_id(id):
+    try:
+        id=int(id)
+    except ValueError:
+        return jsonify({
+            "error":"Id must be an integer"
+        }),400
+    if id<1:
+        return jsonify({
+            "error":"Id must be greater than or equal to 1"
+        }),400
+    for task in tasks:
+        if task["id"]==id:
+            return jsonify(task),200
+    return jsonify({
+        "error":"Task not found"
+    }),404
 
 
-#get task by query
+#pagination
+#using query parameters
+@app.get("/api/v1/tasks")
+def task_pagination():
+    search=request.args.get("search")
+    print("search parameter: ",search)
+    page=request.args.get("page",default=1,type=int)
+    print("page parameter: ",page)
+    per_page=request.args.get("per_page",default=5,type=int)
+    print("per_page parameter: ",per_page)
+    title=request.args.get("title")
+    print("title parameter: ",title)
+    description=request.args.get("description")
+    print("description parameter: ",description)
+    priority=request.args.get("priority")
+    print("priority parameter: ",priority)
+    status=request.args.get("status")
+    print("status parameter: ",status)
+    #validate query parameters
+    # page=int(page)
+    if page<1:
+        return jsonify({
+            "error":"page must be greater than or equal to 1"
+        }),400
+    if per_page<1 or per_page>100:
+        return jsonify({
+            "error":"per_page must be between 1 and 100"
+        }),400
+
+    #start with all tasks
+    filtered_tasks=tasks
+    #search by title
+    if search:
+        filtered_tasks=[
+                task for task in filtered_tasks if search.lower() in task["title"].lower()
+            ]
+    #filter by title
+    if title:
+        filtered_tasks=[
+            task for task in filtered_tasks if title.lower() in task["title"].lower()
+        ]
+        #filter by  description
+    if description:
+            filtered_tasks=[
+                task for task in filtered_tasks if description.lower() in task["description"].lower()
+            ]
+        #filter by priority
+    if priority:
+            filtered_tasks=[
+                task for task in filtered_tasks if priority.lower() in task["priority"].lower()
+            ]
+        #filter by status
+    if status:
+            filtered_tasks=[
+                task for task in filtered_tasks if status.lower() in task["status"].lower()
+            ]
+    #matching tasks
+    total=len(filtered_tasks)
+    #start page
+    start=(page-1)*per_page
+    print("start page: ",start)
+    #end page
+    end=start+per_page
+    print("end page: ",end)
+    task_pagination=filtered_tasks[start:end]
+    return jsonify({
+            "tasks":task_pagination,
+            "pagination":{
+                "page":page,
+                "per_page":per_page,
+                "total":total,
+                "pages":(total+per_page-1) // per_page
+            }
+
+        }),200
+        
 if __name__=="__main__":
     app.run(debug=True)
