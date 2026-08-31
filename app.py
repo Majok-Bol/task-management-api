@@ -379,20 +379,32 @@ def get_task_by_id(id):
 #using query parameters
 @app.get("/api/v1/tasks")
 def task_pagination():
+    #search parameter
     search=request.args.get("search")
-    print("search parameter: ",search)
+    # print("search parameter: ",search)
+    #page parameter
     page=request.args.get("page",default=1,type=int)
-    print("page parameter: ",page)
+    # print("page parameter: ",page)
+    #per_page parameter
     per_page=request.args.get("per_page",default=5,type=int)
-    print("per_page parameter: ",per_page)
+    # print("per_page parameter: ",per_page)
+    #title parameter
     title=request.args.get("title")
-    print("title parameter: ",title)
+    # print("title parameter: ",title)
+    #description parameter
     description=request.args.get("description")
-    print("description parameter: ",description)
+    # print("description parameter: ",description)
+    #priority parameter
     priority=request.args.get("priority")
-    print("priority parameter: ",priority)
+    # print("priority parameter: ",priority)
+    #status parameter
     status=request.args.get("status")
-    print("status parameter: ",status)
+    # print("status parameter: ",status)
+    #sort tasks
+    #sort_by parameter
+    sort_by=request.args.get("sort_by",default="id")
+    #sort_order parameter
+    sort_order=request.args.get("sort_order",default="asc")
     #validate query parameters
     # page=int(page)
     if page<1:
@@ -431,6 +443,53 @@ def task_pagination():
             filtered_tasks=[
                 task for task in filtered_tasks if status.lower() in task["status"].lower()
             ]
+    #sort first before including start and end 
+    #validate sort parameters
+    allowed_sort_fields=["id","priority","status"]
+    if sort_by not in allowed_sort_fields:
+        return jsonify({
+            "error":"Invalid sort field",
+            "allowed":allowed_sort_fields
+
+        }),400
+    if sort_order not in ["asc","desc"]:
+        return jsonify({
+            "error":"Sort order must be asc or desc"
+        }),400
+
+
+
+
+    #add sorting before start and end are calculated
+    # if sort_order=="asc":
+    #     filtered_tasks.sort(key=lambda task:task[sort_by])
+    # else:
+    #     filtered_tasks.sort(key=lambda task:task[sort_by],reverse=True)
+
+
+    #use sort method
+    # if sort_order=="asc":
+    #     def get_sort_value(task):
+    #         return task[sort_by]
+    #     filtered_tasks.sort(key=get_sort_value)
+    # else:
+    #     def get_sort_value(task):
+    #         return task[sort_by]
+    #     filtered_tasks.sort(key=get_sort_value,reverse=True)
+
+
+    #use sorted method
+    # if sort_order=="asc":
+    #     filtered_tasks=sorted(filtered_tasks,key=lambda task:task[sort_by])
+    # else:
+    #     filtered_tasks=sorted(filtered_tasks,key=lambda task:task[sort_by],reverse=True)
+    
+
+    #shorter method
+    filtered_tasks=sorted(filtered_tasks,key=lambda task:task[sort_by],reverse=(sort_order=="desc"))
+
+
+
     #matching tasks
     total=len(filtered_tasks)
     #start page
@@ -450,6 +509,72 @@ def task_pagination():
             }
 
         }),200
-        
+#add task
+@app.post("/api/v1/tasks")
+def add_task():
+    data=request.get_json()
+    new_task={
+        "id":len(tasks)+1,
+        "title":data["title"],
+        "description":data["description"],
+        "priority":data["priority"],
+        "status":data["status"]
+    }
+    tasks.append(new_task)
+    return new_task,201
+#update task
+@app.patch("/api/v1/tasks")
+def update_task():
+    id=request.args.get("id")
+    #get data
+    data=request.get_json()
+    print("data: ",data)
+    if id:
+        try:
+            id=int(id)
+        except ValueError:
+            return {
+                "error":"id must be an integer"
+            },400
+        #get the task with that id
+        for task in tasks:
+            if task["id"]==id:
+                #check if its title being changed
+                if "title" in data:
+                    task["title"]=data["title"]
+                #check description
+                if "description" in data:
+                    task["description"]=data["description"]
+                #check priority
+                if "priority" in data:
+                    task["priority"]=data["priority"]
+                #check status
+                if "status" in data:
+                    task["status"]=data["status"]
+                return task,200
+        return {
+            "error":"Task not found"
+        },404
+#delete task
+@app.delete("/api/v1/tasks")
+def delete_task():
+    data=request.get_json()
+    print("Data: ",data)
+    #get id
+    id=request.args.get("id")
+    if id:
+        try:
+            id=int(id)
+        except ValueError:
+            return {
+                "error":"Id must be an integer"
+            },400
+    for task in tasks:
+        if task["id"]==id:
+            tasks.remove(task)
+            return "",204
+    return {
+        "error":"Task not found"
+    },404
 if __name__=="__main__":
     app.run(debug=True)
