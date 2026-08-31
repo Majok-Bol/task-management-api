@@ -888,17 +888,5 @@ This project is intended to develop practical understanding of:
 * HTTP status codes
 * API testing with Postman
 
-Future versions will extend these skills into:
-
-* SQL
-* SQLAlchemy
-* Database design
-* Authentication
-* Authorization
-* JWT
-* API security
-* BOLA/IDOR
-* RBAC
-* API testing
 
 ---
